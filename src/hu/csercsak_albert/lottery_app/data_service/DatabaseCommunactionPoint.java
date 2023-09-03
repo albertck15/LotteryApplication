@@ -2,7 +2,6 @@ package hu.csercsak_albert.lottery_app.data_service;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Properties;
 
@@ -43,8 +42,8 @@ class DatabaseCommunactionPoint {
 		return CONNECTION;
 	}
 
-	void setNextUpdate() throws SQLException, DatabaseException { // Saving next update's date into the properties file
-		LocalDate next = getNextUpdateDate();
+	void setNextUpdate() throws DatabaseException { // Saving next update's date into the properties file
+		LocalDate next = DatabaseContactPointImpl.getInstance().getLatestDrawDate().plusDays(8);
 		PROPERTIES.setProperty("next_update", getAsFormatted(next));
 		PROPERTIES.setProperty("max_date", getAsFormatted(next.minusDays(7))); // This will be the newest date in the database
 		try (FileOutputStream outputStream = new FileOutputStream(Constants.getSqlPropertiesPath())) {
@@ -54,8 +53,14 @@ class DatabaseCommunactionPoint {
 		}
 	}
 
-	private LocalDate getNextUpdateDate() throws SQLException, DatabaseException {
-		return DatabaseContactPointImpl.getInstance().getLatestDrawDate().plusDays(8);
+	public void setMinDate() throws DatabaseException {
+		LocalDate minDate = DatabaseContactPointImpl.getInstance().getOldestDrawDate();
+		PROPERTIES.setProperty("min_date", getAsFormatted(minDate));
+		try (FileOutputStream outputStream = new FileOutputStream(Constants.getSqlPropertiesPath())) {
+			PROPERTIES.store(outputStream, "Updated properties");
+		} catch (IOException e) {
+			System.err.println("ERROR! " + e.getMessage());
+		}
 	}
 
 	private String getAsFormatted(LocalDate date) {

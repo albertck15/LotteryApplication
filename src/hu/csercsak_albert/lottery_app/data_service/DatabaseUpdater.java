@@ -39,6 +39,9 @@ class DatabaseUpdater {
 			updateDraws();
 			updateEurHufExchanges();
 			dbCommunicationPoint.setNextUpdate();
+			if (latestDate.equals(LocalDate.of(1980, 1, 1))) { //Checking if the latestDate is the 'default' date when only appears when we run the application first time
+				dbCommunicationPoint.setMinDate();
+			}
 		} catch (SQLException e) {
 			System.err.printf("ERROR! (%s) Updating database has been failed!", e.getMessage());
 		} catch (IOException e) {

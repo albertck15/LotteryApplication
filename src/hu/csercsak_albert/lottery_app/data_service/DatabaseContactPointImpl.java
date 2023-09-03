@@ -241,6 +241,7 @@ public class DatabaseContactPointImpl implements DatabaseContactPoint {
 					if (resultSet.next()) {
 						return resultSet.getDate("draw_date").toLocalDate();
 					}
+					return LocalDate.of(1980, 1, 1); // Default value for the first time running the application
 				}
 			}
 		} catch (SQLException e) {
