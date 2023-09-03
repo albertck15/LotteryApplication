@@ -14,7 +14,7 @@ This application helps to rethink your tactic with more kind of analysis.
 
 ### Installation 🔧
 Set up a database named "drawsOfOtoslotto" (*Or you can customise it of course, just make sure you write the correct connection path to the properties too*),
-Replace user, password, connection in resources/sql.properties (*Dates are 1980-01-01 as a default starter dates, at the first run these will be updated*).
+Replace user, password, connection in **resources/sql.properties** (*Dates are 1980-01-01 as a default starter dates, at the first run these will be updated*).
 ❗ Run **src/Setup.java** first for setting up the tables in the database ❗
 After that, you can start the program with the **src/hu/csercsak_albert/lottery_app/main/Main.java** file.
 The first updating after starting the program will take around 1min and 15secs. 
