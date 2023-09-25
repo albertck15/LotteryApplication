@@ -22,7 +22,7 @@ public interface DatabaseContactPoint {
 
 	LocalDate getOldestDrawDate() throws DatabaseException;
 
-	LocalDate getLatestDrawDate() throws DatabaseException;
+	LocalDate getEarliestDate() throws DatabaseException;
 
 	List<Draw> getDrawsOfHighestPrizes(int count) throws DatabaseException;
 }

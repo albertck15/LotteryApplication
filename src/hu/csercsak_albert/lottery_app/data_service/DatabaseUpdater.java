@@ -8,26 +8,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.postgresql.util.PSQLException;
-
 import hu.csercsak_albert.lottery_app.general.DatabaseException;
 import hu.csercsak_albert.lottery_app.general.HtmlReadingException;
 
 class DatabaseUpdater {
 
 	private final DatabaseCommunactionPoint dbCommunicationPoint = DatabaseCommunactionPoint.getInstance();
-
-	private final DatabaseContactPointImpl dbContactPoint = DatabaseContactPointImpl.getInstance();
-
-	private final LocalDate latestDate;
+	private final LocalDate nextUpdateDate;
 
 	DatabaseUpdater() {
-		try {
-			latestDate = dbContactPoint.getLatestDrawDate();
-		} catch (DatabaseException e) {
-			System.out.printf("ERROR! %s, the application can not start!", e.getMessage());
-			throw new RuntimeException();
-		}
+		nextUpdateDate = dbCommunicationPoint.getNextUpdate();
 	}
 
 	/**********************************************************************************************
@@ -38,10 +28,7 @@ class DatabaseUpdater {
 		try {
 			updateDraws();
 			updateEurHufExchanges();
-			dbCommunicationPoint.setNextUpdate();
-			if (latestDate.equals(LocalDate.of(1980, 1, 1))) { //Checking if the latestDate is the 'default' date when only appears when we run the application first time
-				dbCommunicationPoint.setMinDate();
-			}
+			dbCommunicationPoint.setProperties();
 		} catch (SQLException e) {
 			System.err.printf("ERROR! (%s) Updating database has been failed!", e.getMessage());
 		} catch (IOException e) {
@@ -54,7 +41,7 @@ class DatabaseUpdater {
 		try (var connection = DriverManager.getConnection(dbCommunicationPoint.getConnection(), dbCommunicationPoint.getLogin(),
 				dbCommunicationPoint.getPassword())) {
 			var reader = new HTMLReader();
-			List<Draw> draws = reader.readDrawsBackUntil(latestDate);
+			List<Draw> draws = reader.readDrawsBackUntil(nextUpdateDate);
 			String query = """
 					INSERT INTO draws (year, week, draw_date, five_hit_count, five_hit_prize,
 									 four_hit_count, four_hit_prize, three_hit_count,
@@ -62,10 +49,11 @@ class DatabaseUpdater {
 					VALUES	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 					""";
 			for (var draw : draws) {
-				if (draw.getDate().isEqual(latestDate) || draw.getDate().isBefore(latestDate)) {
-					return;
+				try {
+					executeNext(connection, query, draw);
+				} catch (SQLException e) { //<-- throws when trying to insert a value that is already in
+					break;
 				}
-				executeNext(connection, query, draw);
 			}
 		}
 	}
@@ -84,10 +72,7 @@ class DatabaseUpdater {
 			preStatement.setInt(10, draw.getTwoHitCount());
 			preStatement.setInt(11, draw.getTwoHitPrize());
 			preStatement.setArray(12, connection.createArrayOf("INTEGER", draw.getNumbers()));
-			try {
-				preStatement.executeUpdate();
-			} catch (PSQLException e) {
-			}
+			preStatement.executeUpdate();
 		}
 	}
 
@@ -101,37 +86,34 @@ class DatabaseUpdater {
 		try (var connection = DriverManager.getConnection(dbCommunicationPoint.getConnection(), dbCommunicationPoint.getLogin(),
 				dbCommunicationPoint.getPassword())) {
 			for (var date : dates) {
-				String URL = String.format("https://www.exchangerates.org.uk/EUR-HUF-%s_%s_%s-exchange-rate-history.html", // <- Only have data from
-																															// 2009-10-10
-						date.getDayOfMonth(), date.getMonth(), date.getYear());
-				try {
-					double oneEuroValueToHuf = reader.getValueFromURL(URL);
-					String query = "INSERT INTO eur_huf_exchange_rates (date, huf_value) VALUES(?,?);";
-					try (var preStatement = connection.prepareStatement(query)) {
-						preStatement.setDate(1, new java.sql.Date(date.toEpochDay() * 86400000L));
-						preStatement.setDouble(2, oneEuroValueToHuf);
-						preStatement.executeUpdate();
+				if (date.isAfter(dbCommunicationPoint.getMinEurReadDate())) {// <- Only have data from 2009-10-10
+					String url = String.format("https://www.exchangerates.org.uk/EUR-HUF-%s_%s_%s-exchange-rate-history.html", date.getDayOfMonth(),
+							date.getMonth(), date.getYear());
+					try {
+						double oneEuroValueToHuf = reader.getValueFromURL(url);
+						String query = "INSERT INTO eur_huf_exchange_rates (date, huf_value) VALUES(?,?);";
+						try (var preStatement = connection.prepareStatement(query)) {
+							preStatement.setDate(1, new java.sql.Date(date.toEpochDay() * 86400000L));
+							preStatement.setDouble(2, oneEuroValueToHuf);
+							preStatement.executeUpdate();
+						}
+					} catch (HtmlReadingException e) {
+						throw new SQLException("Something went wrong while updating Eur/Huf values");
 					}
-				} catch (HtmlReadingException e) {
 				}
 			}
 		}
 	}
 
-	private List<LocalDate> getDatesToUpdate() throws SQLException { // FIXME Doesnt work!!! have to fix ASAP!
+	private List<LocalDate> getDatesToUpdate() throws SQLException {
 		List<LocalDate> dates = new ArrayList<>();
 		try (var connection = DriverManager.getConnection(dbCommunicationPoint.getConnection(), dbCommunicationPoint.getLogin(),
 				dbCommunicationPoint.getPassword())) {
 			try (var statement = connection.createStatement()) {
-				String query = """
-						SELECT draw_date FROM draws
-						WHERE NOT EXISTS
-						(SELECT * FROM eur_huf_exchange_rates
-						WHERE draws.draw_date = eur_huf_exchange_rates.date);
-						""";
+				String query = "SELECT draw_date FROM draws WHERE draw_date NOT IN (SELECT date FROM eur_huf_exchange_rates);";
 				try (var resultSet = statement.executeQuery(query)) {
 					while (resultSet.next()) {
-						dates.add(resultSet.getDate(1).toLocalDate());
+						dates.add(resultSet.getDate("draw_date").toLocalDate());
 					}
 				}
 			}

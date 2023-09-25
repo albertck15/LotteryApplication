@@ -1,6 +1,8 @@
 package hu.csercsak_albert.lottery_app.main;
 
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 
 import hu.csercsak_albert.lottery_app.data_service.DatabaseMaintainerImpl;
 import hu.csercsak_albert.lottery_app.general.DatabaseException;
@@ -17,8 +19,11 @@ public class Main {
 	private void run() throws DefinitonException {
 		var th = new TextHolder();
 		try {
-			th.welcome();
+			Instant start = Instant.now();
 			checkAndUpdateDatabase();
+			double runningTimeMillis = Duration.between(start, Instant.now()).toMillis();
+			System.out.println("Updating time was %.2f s".formatted(runningTimeMillis / 1000));
+			th.welcome();
 			th.printInfos();
 			process();
 		} catch (DatabaseException e) {

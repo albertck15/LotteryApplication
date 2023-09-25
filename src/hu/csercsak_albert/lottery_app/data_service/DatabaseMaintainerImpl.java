@@ -17,13 +17,9 @@ public class DatabaseMaintainerImpl implements DatabaseMaintainer {
 	@Override
 	public void checkAndUpdate() throws DatabaseException {
 		LocalDate nextUpdate = dbCommunicationPoint.getNextUpdate();
-		if (nextUpdate == null || LocalDate.now().isAfter(nextUpdate)) { // Null at first start
+		if (nextUpdate == null || LocalDate.now().isAfter(nextUpdate)) { // 1970.01.01 at first start
 			System.out.printf("%nUpdating database, please wait.%n%n");
 			new DatabaseUpdater().update();
 		}
-	}
-
-	void firstRunUpdate() {
-		
 	}
 }

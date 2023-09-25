@@ -59,7 +59,7 @@ class HTMLReader {
 		try (var ins = new URL(urlLink).openStream()) {
 			try (var inputStream = new InputStreamReader(ins)) {
 				try (var scanner = new Scanner(inputStream)) {
-					Pattern pattern = Pattern.compile(".+Close: 1 EUR = (?<value>(\\d{3}\\.\\d{2})) HUF.+");
+					Pattern pattern = Pattern.compile(".+Close: 1 EUR = (?<value>(\\d{3}\\.?\\d{0,2})) HUF.+");
 					Matcher m;
 					while (scanner.hasNextLine()) {
 						String line = scanner.nextLine();

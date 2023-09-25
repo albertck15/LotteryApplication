@@ -11,8 +11,8 @@ class Setup {
 	private static final Properties SQL_PROPERTIES = new Properties();
 	private static final String SQL_PROP_PATH = "src/hu/csercsak_albert/lottery_app/resources/sql.properties";
 	static {
-		try (var fos = new FileInputStream(SQL_PROP_PATH)) {
-			SQL_PROPERTIES.load(fos);
+		try (var fis = new FileInputStream(SQL_PROP_PATH)) {
+			SQL_PROPERTIES.load(fis);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException();

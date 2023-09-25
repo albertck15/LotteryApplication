@@ -16,8 +16,13 @@ class MenuBuildingPoint {
 
 	private static final Properties PROPERTIES = Constants.getMenuProperties();
 
-	private static final String TYPE = PROPERTIES.getProperty("type");
-	private static final String PROMPT = PROPERTIES.getProperty("prompt");
+	private static final String TYPE;
+	private static final String PROMPT;
+
+	static {
+		TYPE = (PROPERTIES.getProperty("type").isEmpty()) ? "1" : PROPERTIES.getProperty("type");
+		PROMPT = (PROPERTIES.getProperty("prompt").isEmpty()) ? "-->" : PROPERTIES.getProperty("prompt");
+	}
 
 	static Menu getMenu(UserInput userInput, List<Operation> operations) throws DefinitonException {
 		return getMenu(TYPE, PROMPT, operations, userInput);
